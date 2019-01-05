@@ -83,55 +83,131 @@ export default class Battery extends Component {
         this.setState({ deviceName: device.name })
         this.manager.stopDeviceScan()
 
-        device
-          .connect()
-          .then(device => {
-            console.log('Discovering services')
-            return await device.discoverAllServicesAndCharacteristics()
-          })
-          .then(device => {
-            // Do work on device with services and characteristics
+        // device
+        //   .connect()
+        //   .then(device => {
+        //     console.log('Discovering services')
+        //     return this.discoverServices(device)
+        //   })
+        //   .then(device => {
+        //     // Do work on device with services and characteristics
 
-            console.log('Writing to Device')
-            console.log(device.serviceUUIDs)
-
-            // return this.setupNotifications(device)
-          })
-          .catch(error => {
-            console.log('error:', error)
-          })
+        //     console.log('Writing to Device')
+        //     console.log(device.serviceUUIDs)
+        //     return this.readChars(device)
+        //     // return this.setupNotifications(device)
+        //   })
+        //   .catch(error => {
+        //     console.log('error:', error)
+        //   })
 
         // Proceed with connection.
+        this.setupConnection(device)
       } else {
         this.setState({ deviceName: 'no device found' })
       }
     })
   }
+  setupConnection = async device => {
+    const connectedDevice = await this.manager.connectToDevice(device.id)
+    const services = await connectedDevice.discoverAllServicesAndCharacteristics()
+    const characteristic = await this.getServicesAndCharacteristics(services)
 
-  async setupNotifications(device) {
-    const service = this.serviceUUID(3)
-    //const service = '_40'
-    const characteristicW = this.writeUUID(3)
-    const characteristicN = this.notifyUUID(3)
+    console.log(characteristic)
+    //await this.readChars(characteristic)
+    //this.writeChars(characteristic)
+    await this.writeToDevice(device, characteristic)
+    
+    await this.readToDevice(device, characteristic)
+    console.log('exiting...')
+  }
+  getServicesAndCharacteristics(device) {
+    return new Promise((resolve, reject) => {
+      device.services().then(services => {
+        const characteristics = []
 
-    const characteristic = await device.writeCharacteristicWithResponseForService(
-      service,
-      characteristicW,
-      'AQ==' /* 0x01 in hex */
-    )
+        services.forEach((service, i) => {
+          service.characteristics().then(c => {
+            characteristics.push(c)
 
-    device.monitorCharacteristicForService(
-      service,
-      characteristicN,
-      (error, characteristic) => {
-        if (error) {
-          this.error(error.message)
-          return
-        }
-        this.updateValue(characteristic.uuid, characteristic.value)
-      }
+            if (i === services.length - 1) {
+              const temp = characteristics.reduce((acc, current) => {
+                return [...acc, ...current]
+              }, [])
+              const dialog = temp.find(
+                characteristic => characteristic.isWritableWithoutResponse
+              )
+              if (!dialog) {
+                reject('No writable characteristic')
+              }
+              resolve(dialog)
+            }
+          })
+        })
+      })
+    })
+  }
+  // async discoverServices(device) {
+  //   servicesFound = await device.discoverAllServicesAndCharacteristics()
+  //   console.log('services discoverd::', device.services())
+  //   return servicesFound
+  // }
+  async readChars(characteristic) {
+    //const characteristic = await device.readCharacteristicForService(null, 40)
+
+    console.log('Characteristics logs::', characteristic.read())
+  }
+
+
+  async writeChars(characteristic) {
+    //const characteristic = await device.readCharacteristicForService(null, 40)
+
+    console.log('writing...')
+    characteristic.writeWithResponse('1234').catch(error => {
+      console.log('error while writing:', error)
+    })
+  }
+
+
+  writeToDevice = async (device, characteristic) => {
+    await device.writeCharacteristicWithResponseForService(
+      characteristic.serviceUUID,
+      characteristic.uuid,
+      '12'
     )
   }
+  readToDevice =  (device, characteristic) => {
+    const readVal =  device.readCharacteristicForService(
+      characteristic.serviceUUID,
+      characteristic.uuid
+    )
+    console.log(readVal)
+  }
+
+  // async setupNotifications(device) {
+  //   const service = this.serviceUUID(3)
+  //   //const service = '_40'
+  //   const characteristicW = this.writeUUID(3)
+  //   const characteristicN = this.notifyUUID(3)
+
+  //   const characteristic = await device.writeCharacteristicWithResponseForService(
+  //     device.serviceUUIDs,
+  //     characteristicW,
+  //     'AQ==' /* 0x01 in hex */
+  //   )
+
+  //   device.monitorCharacteristicForService(
+  //     service,
+  //     characteristicN,
+  //     (error, characteristic) => {
+  //       if (error) {
+  //         this.error(error.message)
+  //         return
+  //       }
+  //       this.updateValue(characteristic.uuid, characteristic.value)
+  //     }
+  //   )
+  // }
 
   render() {
     return (
