@@ -1,18 +1,39 @@
 import React, { Component } from 'react'
-import {
-  StyleSheet,
-  Text,
-  View,
-  Button,
-  PermissionsAndroid
-} from 'react-native'
+import { StyleSheet, Text, View, ScrollView } from 'react-native'
+import { CustomText } from '../styles/LastCyclestyles'
+import WarningCard from './WarningCard'
 
 export default class LastCycle extends Component {
+  state = {
+    warnings: [
+      {
+        date: '24/2/18',
+        time: '3.40 pm',
+        warning: 'Battery tempreture is high'
+      },
+      {
+        date: '1/1/19',
+        time: '5.50 pm',
+        warning: 'Too much discharge current'
+      }
+    ]
+  }
   render() {
     return (
       <View style={styles.container}>
-        <Text style={styles.instructions}>Hello user</Text>
-        <Text style={styles.welcome}>Warnings displayed here</Text>
+        <CustomText>Warnings</CustomText>
+        <ScrollView style={{ marginBottom: 15 }}>
+          {this.state.warnings.map((item, index) => {
+            return (
+              <WarningCard
+                key={index}
+                time={item.time}
+                date={item.date}
+                warning={item.warning}
+              />
+            )
+          })}
+        </ScrollView>
       </View>
     )
   }

@@ -7,10 +7,14 @@
     "test": "jest"
   },
   "dependencies": {
+    "@babel/runtime": "^7.2.0",
     "react": "16.6.3",
     "react-native": "0.57.8",
     "react-native-ble-plx": "^1.0.1",
+    "react-native-charts-wrapper": "^0.5.0",
     "react-native-gesture-handler": "^1.0.12",
+    "react-native-speedometer-chart": "^0.6.4",
+    "react-native-svg": "^4.5.0",
     "react-navigation": "^3.0.9",
     "styled-components": "^4.1.3"
   },

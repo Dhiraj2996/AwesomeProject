@@ -1,5 +1,5 @@
 import styled from 'styled-components'
-import React, { Component } from 'react'
+
 
 export const TextButton = styled.Text`
   font-size: 18px;

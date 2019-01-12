@@ -1,26 +1,30 @@
 import React, { Component } from 'react'
-import Connect from './screens/Connect'
-import Battery from './screens/Battery'
-import Login from './screens/Login'
-import LastCycle from './screens/LastCycle'
-import Commercial from './screens/Commercial'
-import Warnings from './screens/Warnings'
 import {
   createStackNavigator,
   createAppContainer,
   createDrawerNavigator
 } from 'react-navigation'
 
+//import the required screens
+import Connect from './screens/Connect'
+import Battery from './screens/Battery'
+import Login from './screens/Login'
+import LastCycle from './screens/LastCycle'
+import Commercial from './screens/Commercial'
+import Warnings from './screens/Warnings'
+import SideMenu from './screens/SideMenu'
+
+//define screens which will have access to drawer
 const DrawerNavigator = createDrawerNavigator(
   {
+    LastCycle: {
+      screen: LastCycle
+    },
     Connect: {
       screen: Connect,
       navigationOptions: {
         header: null
       }
-    },
-    LastCycle: {
-      screen: LastCycle
     },
     Commercial: {
       screen: Commercial
@@ -30,8 +34,10 @@ const DrawerNavigator = createDrawerNavigator(
     }
   },
   {
-    //contentComponent: props => <Sidebar2 {...props} />,
-    initialRouteName: 'Connect'
+    //to customize the drawer
+    contentComponent: props => <SideMenu {...props} />,
+    //starting screen of drawer
+    initialRouteName: 'LastCycle'
   }
 )
 
@@ -58,6 +64,7 @@ const AppStackNavigator = createStackNavigator(
     }
   },
   {
+    //starting route of stackNavigator
     initialRouteName: 'Login'
   }
 )
