@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View, Button } from 'react-native'
 import { BleManager } from 'react-native-ble-plx'
 
 export default class Battery extends Component {
@@ -8,20 +8,15 @@ export default class Battery extends Component {
     this.manager = new BleManager()
     this.prefixUUID = 'f000aa'
     this.suffixUUID = '-0451-4000-b000-000000000000'
-    this.sensors = {
-      0: 'Temperature',
-      1: 'Accelerometer',
-      2: 'Humidity',
-      3: 'Magnetometer',
-      4: 'Barometer',
-      5: 'Gyroscope'
-    }
   }
 
   state = {
-    deviceName: 'start',
+    deviceName: '',
+    stateInfo: '',
     info: '',
-    values: {}
+    values: {},
+    characteristic: '',
+    device: ''
   }
 
   serviceUUID(num) {
@@ -69,6 +64,7 @@ export default class Battery extends Component {
         return
       }
       console.log('Scanning for devices...')
+      this.setState({ stateInfo: 'Searching for device...' })
       // if (device == null) {
       //   this.setState({ deviceName: 'no device found' })
       // } else {
@@ -82,6 +78,7 @@ export default class Battery extends Component {
         console.log('Found Device')
         this.setState({ deviceName: device.name })
         this.manager.stopDeviceScan()
+        this.setState({ stateInfo: 'device found' })
 
         // device
         //   .connect()
@@ -110,18 +107,28 @@ export default class Battery extends Component {
   }
   setupConnection = async device => {
     const connectedDevice = await this.manager.connectToDevice(device.id)
-    const services = await connectedDevice.discoverAllServicesAndCharacteristics()
-    const characteristic = await this.getServicesAndCharacteristics(services)
+    const servicesDiscovered = await connectedDevice.discoverAllServicesAndCharacteristics()
+    //console.log(servicesDiscovered)
 
-    console.log(characteristic)
-    //await this.readChars(characteristic)
-    //this.writeChars(characteristic)
-    await this.writeToDevice(device, characteristic)
-    
-    await this.readToDevice(device, characteristic)
+    const tempChar = await this.getReadableServicesAndCharacteristics(
+      servicesDiscovered
+    )
+    this.setState({ characteristic: tempChar, device: device })
+    console.log('Is Readable::', tempChar.isReadable)
+    console.log('Read Char', tempChar)
+    await this.readToDevice(device, tempChar)
+
+    // const Monitorcharacteristic = await this.getNotifyServicesAndCharacteristics(
+    //   servicesDiscovered
+    // )
+    // console.log('Is Notifiable::', Monitorcharacteristic.isNotifiable)
+    // console.log('Notifiable Char::', Monitorcharacteristic)
+    // if (Monitorcharacteristic.isNotifiable) {
+    //   this.monitorDevice(device, Monitorcharacteristic)
+    // }
     console.log('exiting...')
   }
-  getServicesAndCharacteristics(device) {
+  getNotifyServicesAndCharacteristics(device) {
     return new Promise((resolve, reject) => {
       device.services().then(services => {
         const characteristics = []
@@ -135,7 +142,37 @@ export default class Battery extends Component {
                 return [...acc, ...current]
               }, [])
               const dialog = temp.find(
-                characteristic => characteristic.isWritableWithoutResponse
+                characteristic => characteristic.isNotifiable
+                //Specify here you want writable(with or without response) or isReadable or isNotifiable characteristic
+              )
+              if (!dialog) {
+                reject('No writable characteristic')
+              }
+              resolve(dialog)
+            }
+          })
+        })
+      })
+    })
+  }
+  getReadableServicesAndCharacteristics(device) {
+    return new Promise((resolve, reject) => {
+      device.services().then(services => {
+        const characteristics = []
+        console.log('Services length:', services.length)
+
+        services.forEach((service, i) => {
+          service.characteristics().then(c => {
+            characteristics.push(c)
+
+            if (i === services.length - 1) {
+              const temp = characteristics.reduce((acc, current) => {
+                return [...acc, ...current]
+              }, [])
+              console.log('temp in getservices::', temp)
+              const dialog = temp.find(
+                characteristic => characteristic.isReadable
+                //Specify here you want writable(with or without response) or isReadable or isNotifiable characteristic
               )
               if (!dialog) {
                 reject('No writable characteristic')
@@ -152,22 +189,6 @@ export default class Battery extends Component {
   //   console.log('services discoverd::', device.services())
   //   return servicesFound
   // }
-  async readChars(characteristic) {
-    //const characteristic = await device.readCharacteristicForService(null, 40)
-
-    console.log('Characteristics logs::', characteristic.read())
-  }
-
-
-  async writeChars(characteristic) {
-    //const characteristic = await device.readCharacteristicForService(null, 40)
-
-    console.log('writing...')
-    characteristic.writeWithResponse('1234').catch(error => {
-      console.log('error while writing:', error)
-    })
-  }
-
 
   writeToDevice = async (device, characteristic) => {
     await device.writeCharacteristicWithResponseForService(
@@ -176,12 +197,33 @@ export default class Battery extends Component {
       '12'
     )
   }
-  readToDevice =  (device, characteristic) => {
-    const readVal =  device.readCharacteristicForService(
+  readToDevice = async (device, characteristic) => {
+    await device
+      .readCharacteristicForService(
+        characteristic.serviceUUID,
+        characteristic.uuid
+      )
+      .then(value => console.log('Read Data..::', value.value))
+  }
+
+  monitorDevice = async (device, characteristic) => {
+    const transactionId = 'monitor11'
+    console.log('In Monitor device::' + characteristic)
+    sub = await device.monitorCharacteristicForService(
       characteristic.serviceUUID,
-      characteristic.uuid
+      characteristic.uuid,
+      (error, data) => {
+        if (error) {
+          console.log('Error while monitoring::', error)
+          return
+        }
+        console.log('Read Data..::', data)
+      },
+      transactionId
     )
-    console.log(readVal)
+
+    setTimeout(() => this.manager.cancelTransaction(transactionId), 10000)
+    console.log('Sub obj::', sub)
   }
 
   // async setupNotifications(device) {
@@ -212,9 +254,15 @@ export default class Battery extends Component {
   render() {
     return (
       <View style={styles.container}>
-        <Text style={styles.welcome}>Welcome to React Native!</Text>
+        <Text style={styles.welcome}>Welcome to Bluetooth Connect!</Text>
         <Text style={styles.instructions}>Battery Here</Text>
         <Text>{this.state.deviceName}</Text>
+        <Button
+          title="Read"
+          onPress={() =>
+            this.readToDevice(this.state.device, this.state.characteristic)
+          }
+        />
       </View>
     )
   }
