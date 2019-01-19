@@ -19,36 +19,36 @@ export default class Battery extends Component {
     device: ''
   }
 
-  serviceUUID(num) {
-    return this.prefixUUID + num + '0' + this.suffixUUID
-  }
+  // serviceUUID(num) {
+  //   return this.prefixUUID + num + '0' + this.suffixUUID
+  // }
 
-  notifyUUID(num) {
-    return this.prefixUUID + num + '1' + this.suffixUUID
-  }
+  // notifyUUID(num) {
+  //   return this.prefixUUID + num + '1' + this.suffixUUID
+  // }
 
-  writeUUID(num) {
-    return this.prefixUUID + num + '2' + this.suffixUUID
-  }
+  // writeUUID(num) {
+  //   return this.prefixUUID + num + '2' + this.suffixUUID
+  // }
 
   info(message) {
     this.setState({ info: message })
   }
 
-  error(message) {
-    this.setState({ info: 'ERROR: ' + message })
-  }
+  // error(message) {
+  //   this.setState({ info: 'ERROR: ' + message })
+  // }
 
-  updateValue(key, value) {
-    this.setState({ values: { ...this.state.values, [key]: value } })
-  }
+  // updateValue(key, value) {
+  //   this.setState({ values: { ...this.state.values, [key]: value } })
+  // }
 
   componentDidMount = () => {
     //get subscription
     const subscription = this.manager.onStateChange(state => {
       if (state === 'PoweredOn') {
         this.scanAndConnect()
-        subscription.remove()
+        //subscription.remove()
       }
     }, true)
     console.log('Component Mounted')
@@ -56,14 +56,15 @@ export default class Battery extends Component {
 
   scanAndConnect = () => {
     //scan for devices
-    console.log('Scan Called')
+    this.info('Scan Called..')
     this.manager.startDeviceScan(null, null, (error, device) => {
       if (error) {
         console.log('Error Scanning', error)
+        this.info(error)
 
         return
       }
-      console.log('Scanning for devices...')
+      this.info('Scanning for devices...')
       this.setState({ stateInfo: 'Searching for device...' })
       // if (device == null) {
       //   this.setState({ deviceName: 'no device found' })
@@ -75,7 +76,7 @@ export default class Battery extends Component {
       // or other criteria.
       if (device.name === 'BM70_BLE') {
         // Stop scanning as it's not necessary if you are scanning for one device.
-        console.log('Found Device')
+        this.info('Found Device ' + device.name)
         this.setState({ deviceName: device.name })
         this.manager.stopDeviceScan()
         this.setState({ stateInfo: 'device found' })
@@ -110,22 +111,32 @@ export default class Battery extends Component {
     const servicesDiscovered = await connectedDevice.discoverAllServicesAndCharacteristics()
     //console.log(servicesDiscovered)
 
-    const tempChar = await this.getReadableServicesAndCharacteristics(
-      servicesDiscovered
-    )
-    this.setState({ characteristic: tempChar, device: device })
-    console.log('Is Readable::', tempChar.isReadable)
-    console.log('Read Char', tempChar)
-    await this.readToDevice(device, tempChar)
-
-    // const Monitorcharacteristic = await this.getNotifyServicesAndCharacteristics(
+    // const tempChar = await this.getReadableServicesAndCharacteristics(
     //   servicesDiscovered
     // )
-    // console.log('Is Notifiable::', Monitorcharacteristic.isNotifiable)
-    // console.log('Notifiable Char::', Monitorcharacteristic)
-    // if (Monitorcharacteristic.isNotifiable) {
-    //   this.monitorDevice(device, Monitorcharacteristic)
-    // }
+    // this.setState({ characteristic: tempChar, device: device })
+    // console.log('Is Readable::', tempChar.isReadable)
+    // console.log('Read Char', tempChar)
+    // await this.readToDevice(device, tempChar)
+
+    const Monitorcharacteristic = await this.getNotifyServicesAndCharacteristics(
+      servicesDiscovered
+    )
+    console.log('Is Notifiable::', Monitorcharacteristic.isNotifiable)
+    console.log('Notifiable Char::', Monitorcharacteristic)
+
+    sub = await device.monitorCharacteristicForService(
+      Monitorcharacteristic.serviceUUID,
+      Monitorcharacteristic.uuid,
+      (error, data) => {
+        if (error) {
+          console.log('Error while monitoring::', error)
+          return
+        }
+        console.log('Read Data..::', data)
+      }
+    )
+    console.log('Sub obj::', sub)
     console.log('exiting...')
   }
   getNotifyServicesAndCharacteristics(device) {
@@ -256,6 +267,7 @@ export default class Battery extends Component {
       <View style={styles.container}>
         <Text style={styles.welcome}>Welcome to Bluetooth Connect!</Text>
         <Text style={styles.instructions}>Battery Here</Text>
+        <Text>{this.state.info}</Text>
         <Text>{this.state.deviceName}</Text>
         <Button
           title="Read"
