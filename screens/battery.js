@@ -5,7 +5,8 @@ import {
   View,
   Button,
   ScrollView,
-  TextInput
+  TextInput,
+  AsyncStorage
 } from 'react-native'
 import { BleManager } from 'react-native-ble-plx'
 import base64 from 'react-native-base64'
@@ -22,13 +23,13 @@ export default class Battery extends Component {
     stateInfo: '',
     info: '',
     values: '',
-    
+    cloudData: '',
     characteristic: '',
     device: {},
     isConnected: false,
     writeText: '',
-    userId:1,
-
+    userId: '1',
+    deviceName: ''
   }
 
   info(message) {
@@ -37,6 +38,7 @@ export default class Battery extends Component {
 
   componentDidMount = () => {
     //get subscription
+    this._retrieveData()
     const subscription = this.manager.onStateChange(state => {
       if (state === 'PoweredOn') {
         this.scanAndConnect()
@@ -44,6 +46,21 @@ export default class Battery extends Component {
       }
     }, true)
     console.log('Component Mounted')
+  }
+  _retrieveData = async () => {
+    try {
+      const value = await AsyncStorage.getItem('userId')
+      const value2 = await AsyncStorage.getItem('deviceName')
+
+      // console.log(value2)
+      await this.setState({
+        userId: value,
+        deviceName: value2
+      })
+      console.log('name ', value2)
+    } catch (error) {
+      console.log(error)
+    }
   }
 
   scanAndConnect = () => {
@@ -60,7 +77,7 @@ export default class Battery extends Component {
 
       // Check if it is a device you are looking for based on advertisement data
       // or other criteria.
-      if (device.name === 'BM70_BLE') {
+      if (device.name === this.state.deviceName) {
         // Stop scanning as it's not necessary if you are scanning for one device.
         this.info('Found Device ' + device.name)
         this.setState({
@@ -88,6 +105,7 @@ export default class Battery extends Component {
     // console.log('Is Readable::', tempChar.isReadable)
     // console.log('Read Char', tempChar)
     // await this.readToDevice(device, tempChar)
+    let count = 0
 
     sub = await device.monitorCharacteristicForService(
       '49535343-fe7d-4ae5-8fa9-9fafd205e455',
@@ -99,7 +117,11 @@ export default class Battery extends Component {
         }
         let dataRead = base64.decode(data.value)
         console.log('Read Data..::', dataRead)
+        count = (count + 1) % 20
         this.setState({ values: this.state.values + '\n' + dataRead })
+        if (count == 19) {
+          this.sendDataToCloudApi()
+        }
       }
     )
     //this.writeToDevice(this.state.device, '14')
@@ -243,19 +265,22 @@ export default class Battery extends Component {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        userId: this.state.gotra
+        userId: this.state.userId,
+        dataStream: this.state.values
       })
     })
       .then(data => {
         return data.json()
       })
       .then(data => {
-        console.log('AddGotra Response', data)
-        if (data.message == 'Gotra Added') {
-          this.props.navigation.state.params.updateGotra()
-          this.props.navigation.navigate('SignupScreen')
+        //console.log('AddGotra Response', data)
+        if (data.message == 'Data Added') {
+          this.setState({ values: '' })
+          console.log('Data sent to Cloud')
         } else {
-          Alert.alert(data.message)
+          Alert.alert(
+            'Error Occured while sending data to cloud! Please make sure you are connected to Internet!'
+          )
         }
       })
       .catch(error => {

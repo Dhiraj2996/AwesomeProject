@@ -6,7 +6,7 @@ import {
   Button,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator
+  AsyncStorage
 } from 'react-native'
 import {
   FlexColumn,
@@ -18,8 +18,55 @@ import {
   Spacer,
   TextButton
 } from '../styles/LoginStyles'
+import { LoginUrl } from '../assests/Apiurls'
 
 export default class Login extends Component {
+  state = {
+    mobile: '',
+    password: ''
+  }
+  LoginApi = () => {
+    console.log('In LoginApi')
+    fetch(LoginUrl, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        mobileNumber: this.state.mobile,
+        password: this.state.password
+      })
+    })
+      .then(data => {
+        return data.json()
+      })
+      .then(data => {
+        if (data.message == 'Login succesfully') {
+          console.log('data received:', data.message)
+          console.log('device_name::', data.deviceName)
+          console.log('userId::', data.userId)
+          this._storeData(data)
+          this.props.navigation.navigate('Drawer')
+          console.log('Logged In')
+        } else {
+          Alert.alert('Login Unsuccessful')
+        }
+      })
+      .catch(error => {
+        Alert.alert('Login Unsuccessful')
+      })
+  }
+  _storeData = async record => {
+    try {
+      await AsyncStorage.multiSet([
+        ['userId', JSON.stringify(record.userId)],
+        ['deviceName', record.deviceName]
+      ])
+    } catch (error) {
+      // Error saving data
+    }
+  }
   render() {
     return (
       <FlexColumn style={styles.container}>
@@ -30,16 +77,13 @@ export default class Login extends Component {
               style={{ fontSize: 18, color: '#fff', flex: 1 }}
               selectionColor="#fff"
               underlineColorAndroid="transparent"
-              //   onChangeText={text => {
-              //     this.setState({ phno: text })
-              //   }}
+              onChangeText={text => {
+                this.setState({ mobile: text })
+              }}
               keyboardType="numeric"
               maxLength={10}
               onSubmitEditing={() => this.passwordInput.focus()}
               returnKeyType="next"
-              ref={input1 => {
-                this.emailInput = input1
-              }}
             />
           </FlexRow>
         </TextField>
@@ -52,11 +96,8 @@ export default class Login extends Component {
               selectionColor="#fff"
               underlineColorAndroid="transparent"
               secureTextEntry={true}
-              onChangeText={text => this.setState({ pwd: text })}
+              onChangeText={text => this.setState({ password: text })}
               returnKeyType="go"
-              ref={input2 => {
-                this.passwordInput = input2
-              }}
             />
           </FlexRow>
         </TextField>
@@ -67,8 +108,7 @@ export default class Login extends Component {
           <LoginButton
             full
             onPress={() => {
-              this.props.navigation.navigate('Drawer')
-              console.log('Logged In')
+              this.LoginApi()
             }}
             style={{ marginBottom: 8 }}
           >
