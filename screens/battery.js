@@ -1,54 +1,46 @@
 import React, { Component } from 'react'
-import { StyleSheet, Text, View, Button } from 'react-native'
+import {
+  StyleSheet,
+  Text,
+  View,
+  Button,
+  ScrollView,
+  TextInput
+} from 'react-native'
 import { BleManager } from 'react-native-ble-plx'
+import base64 from 'react-native-base64'
+import { CloudUrl } from '../assests/Apiurls'
 
 export default class Battery extends Component {
   constructor() {
     super()
     this.manager = new BleManager()
-    this.prefixUUID = 'f000aa'
-    this.suffixUUID = '-0451-4000-b000-000000000000'
   }
 
   state = {
     deviceName: '',
     stateInfo: '',
     info: '',
-    values: {},
+    values: '',
+    
     characteristic: '',
-    device: ''
+    device: {},
+    isConnected: false,
+    writeText: '',
+    userId:1,
+
   }
-
-  // serviceUUID(num) {
-  //   return this.prefixUUID + num + '0' + this.suffixUUID
-  // }
-
-  // notifyUUID(num) {
-  //   return this.prefixUUID + num + '1' + this.suffixUUID
-  // }
-
-  // writeUUID(num) {
-  //   return this.prefixUUID + num + '2' + this.suffixUUID
-  // }
 
   info(message) {
     this.setState({ info: message })
   }
-
-  // error(message) {
-  //   this.setState({ info: 'ERROR: ' + message })
-  // }
-
-  // updateValue(key, value) {
-  //   this.setState({ values: { ...this.state.values, [key]: value } })
-  // }
 
   componentDidMount = () => {
     //get subscription
     const subscription = this.manager.onStateChange(state => {
       if (state === 'PoweredOn') {
         this.scanAndConnect()
-        //subscription.remove()
+        subscription.remove()
       }
     }, true)
     console.log('Component Mounted')
@@ -65,41 +57,19 @@ export default class Battery extends Component {
         return
       }
       this.info('Scanning for devices...')
-      this.setState({ stateInfo: 'Searching for device...' })
-      // if (device == null) {
-      //   this.setState({ deviceName: 'no device found' })
-      // } else {
-      //   this.setState({ deviceName: device.name })
-      // }
 
       // Check if it is a device you are looking for based on advertisement data
       // or other criteria.
       if (device.name === 'BM70_BLE') {
         // Stop scanning as it's not necessary if you are scanning for one device.
         this.info('Found Device ' + device.name)
-        this.setState({ deviceName: device.name })
+        this.setState({
+          deviceName: device.name,
+          stateInfo: 'device found',
+          device: device
+        })
         this.manager.stopDeviceScan()
-        this.setState({ stateInfo: 'device found' })
 
-        // device
-        //   .connect()
-        //   .then(device => {
-        //     console.log('Discovering services')
-        //     return this.discoverServices(device)
-        //   })
-        //   .then(device => {
-        //     // Do work on device with services and characteristics
-
-        //     console.log('Writing to Device')
-        //     console.log(device.serviceUUIDs)
-        //     return this.readChars(device)
-        //     // return this.setupNotifications(device)
-        //   })
-        //   .catch(error => {
-        //     console.log('error:', error)
-        //   })
-
-        // Proceed with connection.
         this.setupConnection(device)
       } else {
         this.setState({ deviceName: 'no device found' })
@@ -109,8 +79,8 @@ export default class Battery extends Component {
   setupConnection = async device => {
     const connectedDevice = await this.manager.connectToDevice(device.id)
     const servicesDiscovered = await connectedDevice.discoverAllServicesAndCharacteristics()
-    //console.log(servicesDiscovered)
 
+    this.setState({ isConnected: true })
     // const tempChar = await this.getReadableServicesAndCharacteristics(
     //   servicesDiscovered
     // )
@@ -119,26 +89,24 @@ export default class Battery extends Component {
     // console.log('Read Char', tempChar)
     // await this.readToDevice(device, tempChar)
 
-    const Monitorcharacteristic = await this.getNotifyServicesAndCharacteristics(
-      servicesDiscovered
-    )
-    console.log('Is Notifiable::', Monitorcharacteristic.isNotifiable)
-    console.log('Notifiable Char::', Monitorcharacteristic)
-
     sub = await device.monitorCharacteristicForService(
-      Monitorcharacteristic.serviceUUID,
-      Monitorcharacteristic.uuid,
+      '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+      '49535343-1e4d-4bd9-ba61-23c647249616',
       (error, data) => {
         if (error) {
           console.log('Error while monitoring::', error)
           return
         }
-        console.log('Read Data..::', data)
+        let dataRead = base64.decode(data.value)
+        console.log('Read Data..::', dataRead)
+        this.setState({ values: this.state.values + '\n' + dataRead })
       }
     )
-    console.log('Sub obj::', sub)
+    //this.writeToDevice(this.state.device, '14')
+
     console.log('exiting...')
   }
+  /*
   getNotifyServicesAndCharacteristics(device) {
     return new Promise((resolve, reject) => {
       device.services().then(services => {
@@ -194,18 +162,47 @@ export default class Battery extends Component {
         })
       })
     })
-  }
-  // async discoverServices(device) {
-  //   servicesFound = await device.discoverAllServicesAndCharacteristics()
-  //   console.log('services discoverd::', device.services())
-  //   return servicesFound
-  // }
+  }*/
+  getWritableServicesAndCharacteristics(device) {
+    return new Promise((resolve, reject) => {
+      device.services().then(services => {
+        const characteristics = []
+        console.log('Services length:', services.length)
 
-  writeToDevice = async (device, characteristic) => {
+        services.forEach((service, i) => {
+          service.characteristics().then(c => {
+            characteristics.push(c)
+
+            if (i === services.length - 1) {
+              const temp = characteristics.reduce((acc, current) => {
+                return [...acc, ...current]
+              }, [])
+              // console.log('temp in getservices::', temp)
+              const dialog = temp.find(
+                characteristic => characteristic.isWritableWithoutResponse
+                //Specify here you want writable(with or without response) or isReadable or isNotifiable characteristic
+              )
+              if (!dialog) {
+                reject('No writable characteristic')
+              }
+              resolve(dialog)
+            }
+          })
+        })
+      })
+    })
+  }
+
+  writeToDevice = async (device, text) => {
+    console.log('performing write..')
+    let characteristic = await this.getWritableServicesAndCharacteristics(
+      device
+    )
+    console.log('char found::', characteristic.uuid)
     await device.writeCharacteristicWithResponseForService(
       characteristic.serviceUUID,
       characteristic.uuid,
-      '12'
+      base64.encode(text)
     )
   }
   readToDevice = async (device, characteristic) => {
@@ -237,44 +234,78 @@ export default class Battery extends Component {
     console.log('Sub obj::', sub)
   }
 
-  // async setupNotifications(device) {
-  //   const service = this.serviceUUID(3)
-  //   //const service = '_40'
-  //   const characteristicW = this.writeUUID(3)
-  //   const characteristicN = this.notifyUUID(3)
-
-  //   const characteristic = await device.writeCharacteristicWithResponseForService(
-  //     device.serviceUUIDs,
-  //     characteristicW,
-  //     'AQ==' /* 0x01 in hex */
-  //   )
-
-  //   device.monitorCharacteristicForService(
-  //     service,
-  //     characteristicN,
-  //     (error, characteristic) => {
-  //       if (error) {
-  //         this.error(error.message)
-  //         return
-  //       }
-  //       this.updateValue(characteristic.uuid, characteristic.value)
-  //     }
-  //   )
-  // }
+  sendDataToCloudApi = () => {
+    console.log('In sendDataToCloudApi', this.state.gotra)
+    fetch(CloudUrl, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        userId: this.state.gotra
+      })
+    })
+      .then(data => {
+        return data.json()
+      })
+      .then(data => {
+        console.log('AddGotra Response', data)
+        if (data.message == 'Gotra Added') {
+          this.props.navigation.state.params.updateGotra()
+          this.props.navigation.navigate('SignupScreen')
+        } else {
+          Alert.alert(data.message)
+        }
+      })
+      .catch(error => {
+        console.log('Api call error')
+        console.log(error.message)
+      })
+  }
 
   render() {
     return (
       <View style={styles.container}>
-        <Text style={styles.welcome}>Welcome to Bluetooth Connect!</Text>
-        <Text style={styles.instructions}>Battery Here</Text>
-        <Text>{this.state.info}</Text>
-        <Text>{this.state.deviceName}</Text>
-        <Button
-          title="Read"
-          onPress={() =>
-            this.readToDevice(this.state.device, this.state.characteristic)
-          }
-        />
+        {!this.state.isConnected && (
+          <View
+            style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+          >
+            <Text style={styles.welcome}>Welcome to Bluetooth Connect!</Text>
+            <Text style={styles.instructions}>Battery Here</Text>
+            <Text>{this.state.info}</Text>
+            <Text>{this.state.deviceName}</Text>
+          </View>
+        )}
+        {this.state.isConnected && (
+          <View style={{ flex: 1, flexDirection: 'column' }}>
+            <Text style={styles.welcome}>Welcome to Bluetooth Connect!</Text>
+            <TextInput
+              underlineColorAndroid="transparent"
+              onChangeText={text => {
+                this.setState({ writeText: text })
+              }}
+              style={{ flex: 2, borderWidth: 1 }}
+              value={this.state.writeText}
+            />
+            <Button
+              title="Send to Device"
+              onPress={() => {
+                this.writeToDevice(this.state.device, this.state.writeText)
+                this.setState({ writeText: '' })
+              }}
+              style={{ flex: 1 }}
+            />
+          </View>
+        )}
+        <View style={{ flex: 0.1 }} />
+        {this.state.isConnected && (
+          <View style={{ flex: 2, borderWidth: 1, backgroundColor: '#E5E7E9' }}>
+            <ScrollView>
+              <Text>{this.state.values}</Text>
+            </ScrollView>
+          </View>
+        )}
       </View>
     )
   }
@@ -283,8 +314,7 @@ export default class Battery extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+
     backgroundColor: '#F5FCFF'
   },
   welcome: {
