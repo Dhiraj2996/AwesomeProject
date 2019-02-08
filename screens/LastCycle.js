@@ -7,44 +7,47 @@ export default class LastCycle extends Component {
   //list have some values to be passed to speedometer
   list = [
     {
+      name: 'Charge Energy',
       value: 25,
-      totalValue: 100
+      totalValue: 100,
+      isNumber: 0
     },
     {
+      name: 'Drive Energy',
       value: 75,
-      totalValue: 100
+      totalValue: 100,
+      isNumber: 0
     },
     {
+      name: 'Peak Drive Current',
       value: 50,
-      totalValue: 150
+      totalValue: 150,
+      isNumber: 0
     },
     {
+      name: 'Total Drive Time',
       value: 90,
-      totalValue: 100
+      totalValue: 100,
+      isNumber: 1
     },
     {
+      name: 'Total Charge Time',
       value: 15,
-      totalValue: 50
+      totalValue: 50,
+      isNumber: 1
     },
     {
+      name: 'Battery Pack Temperature',
       value: 23,
-      totalValue: 100
+      totalValue: 100,
+      isNumber: 0
     },
     {
+      name: 'Battery Pack SOC',
       value: 50,
-      totalValue: 100
+      totalValue: 100,
+      isNumber: 0
     }
-  ]
-
-  //the metrics are defined here
-  LastCycleMetrics = [
-    'Charge Capacity WH',
-    'Drive Capacity',
-    'Peak Discharge Current',
-    'Total Drive Time',
-    'Total Charge Time',
-    'Average Battery Pack Temperature',
-    'Peak Battery Pack Temperature'
   ]
 
   //return colour based on percent
@@ -75,7 +78,8 @@ export default class LastCycle extends Component {
                 value={item.value}
                 totalValue={item.totalValue}
                 color={this.getColour(item.value, item.totalValue)}
-                displayName={this.LastCycleMetrics[index]}
+                displayName={item.name}
+                isNumber={item.isNumber}
               />
             )
           })}

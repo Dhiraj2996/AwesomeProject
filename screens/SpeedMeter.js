@@ -9,20 +9,34 @@ export default class Speedmeter extends Component {
       <View style={styles.container}>
         {/* View can be used to give card view to speedometer
             Pass the values as per requirements */}
-        <Speedometer
-          value={this.props.value}
-          totalValue={this.props.totalValue}
-          size={250}
-          outerColor="#d3d3d3"
-          internalColor={this.props.color}
-          showText
-          text={this.props.value}
-          textStyle={{ color: this.props.color }}
-          showLabels
-          labelStyle={{ color: 'blue' }}
-          // showPercent
-          // percentStyle={{ color: this.props.color, textAlign: 'center' }}
-        />
+        {this.props.isNumber == 0 && (
+          <Speedometer
+            value={this.props.value}
+            totalValue={this.props.totalValue}
+            size={250}
+            outerColor="#d3d3d3"
+            internalColor={this.props.color}
+            showText
+            text={this.props.value}
+            textStyle={{ color: this.props.color, fontSize: 20 }}
+            showLabels
+            labelStyle={{ color: 'blue' }}
+            // showPercent
+            // percentStyle={{ color: this.props.color, textAlign: 'center' }}
+          />
+        )}
+
+        {this.props.isNumber == 1 && (
+          <Text
+            style={{
+              textAlign: 'center',
+              fontSize: 30,
+              color: this.props.color
+            }}
+          >
+            {this.props.value}
+          </Text>
+        )}
         <NameText>{this.props.displayName}</NameText>
       </View>
     )

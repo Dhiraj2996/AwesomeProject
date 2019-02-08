@@ -18,35 +18,35 @@ class PieChartScreen extends React.Component {
         horizontalAlignment: 'RIGHT',
         verticalAlignment: 'CENTER',
         orientation: 'VERTICAL',
-        wordWrapEnabled: true
+        wordWrapEnabled: false
       },
       data: {
         dataSets: [
           {
             values: [
-              { value: 45, label: 'Cumulative' },
-              { value: 55, label: 'Remaining' }
+              { value: 60, label: 'Cumulative' },
+              { value: 40, label: 'Remaining' }
             ],
-            label: 'Pie dataset',
+            label: '',
             config: {
               colors: [processColor('#C0FF8C'), processColor('#FFF78C')],
               valueTextSize: 20,
               valueTextColor: processColor('green'),
-              sliceSpace: 5,
-              selectionShift: 13,
+              sliceSpace: 0,
+              selectionShift: 0,
 
               valueFormatter: "#.#'%'",
               valueLineColor: processColor('green'),
-              valueLinePart1Length: 0.5
+              valueLinePart1Length: 0
             }
           }
         ]
       },
-      highlights: [{ x: 2 }],
+      highlights: [{ x: 0 }],
       description: {
-        text: 'This is Pie chart description',
-        textSize: 15,
-        textColor: processColor('darkgray')
+        text: '',
+        textSize: 20,
+        textColor: processColor('red')
       }
     }
   }
@@ -68,17 +68,17 @@ class PieChartScreen extends React.Component {
         <View style={styles.container}>
           <PieChart
             style={styles.chart}
-            logEnabled={true}
+            //logEnabled={true}
             chartBackgroundColor={processColor('pink')}
             chartDescription={this.state.description}
             data={this.state.data}
-            legend={this.state.legend}
-            highlights={this.state.highlights}
+            //legend={this.state.legend}
+            //highlights={this.state.highlights}
             entryLabelColor={processColor('green')}
             entryLabelTextSize={20}
-            drawEntryLabels={true}
+            //drawEntryLabels={true}
             rotationEnabled={true}
-            rotationAngle={45}
+            //rotationAngle={45}
             usePercentValues={true}
             styledCenterText={{
               text: 'KWH',
@@ -88,12 +88,24 @@ class PieChartScreen extends React.Component {
             centerTextRadiusPercent={100}
             holeRadius={40}
             holeColor={processColor('#f0f0f0')}
-            transparentCircleRadius={45}
+            transparentCircleRadius={35}
             transparentCircleColor={processColor('#f0f0f088')}
-            maxAngle={350}
-            onSelect={this.handleSelect.bind(this)}
-            onChange={event => console.log(event.nativeEvent)}
+            //maxAngle={350}
+            //onSelect={this.handleSelect.bind(this)}
+            //onChange={event => console.log(event.nativeEvent)}
           />
+          <View
+            style={{
+              flex: 0.3,
+              flexDirection: 'column',
+              backgroundColor: 'pink'
+            }}
+          >
+            <Text>Previous Renewal Date:</Text>
+            <Text>Validity:</Text>
+            <Text>Pack Type:</Text>
+            <Text>Energy : XXX KWH</Text>
+          </View>
         </View>
       </View>
     )
@@ -105,7 +117,7 @@ const styles = StyleSheet.create({
     flex: 1
   },
   chart: {
-    flex: 1
+    flex: 0.7
   }
 })
 
