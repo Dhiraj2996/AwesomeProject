@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { StyleSheet, Text, View, ScrollView } from 'react-native'
+import { StyleSheet, Alert, View, ScrollView } from 'react-native'
 import { CustomText } from '../styles/LastCyclestyles'
 import WarningCard from './WarningCard'
 
@@ -18,6 +18,62 @@ export default class LastCycle extends Component {
       }
     ]
   }
+
+  componentDidMount = () => {
+    this.frame_reader('FFAAFFAA1B001600500015007500900077006000850020AAFFAAFF')
+  }
+
+  list = [
+    {
+      name: 'Charge Energy',
+      isNumber: 0
+    },
+    {
+      name: 'Drive Energy',
+      isNumber: 0
+    },
+    {
+      name: 'Peak Drive Current',
+      isNumber: 0
+    },
+    {
+      name: 'Total Drive Time',
+      isNumber: 1
+    },
+    {
+      name: 'Total Charge Time',
+      isNumber: 1
+    },
+    {
+      name: 'Battery Pack Temperature',
+      isNumber: 0
+    },
+    {
+      name: 'Battery Pack SOC',
+      isNumber: 0
+    }
+  ]
+  frame_reader(data) {
+    let i = 0
+    let displayData = ''
+    for (i = 0; i < data.length - 7; i++) {
+      if ((data.indexOf('FFAAFFAA'), i)) {
+        break
+      }
+    }
+    displayData = data.substring(i + 7)
+
+    let parseLength = 2
+    for (let parameter = 0; parameter < 7; parameter++) {
+      this.list[parameter].value = parseInt(
+        displayData.substring(parseLength, parseLength + 4)
+      )
+      parseLength += 4
+    }
+
+    console.log(this.list)
+  }
+
   render() {
     return (
       <View style={styles.container}>

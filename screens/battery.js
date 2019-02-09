@@ -28,8 +28,7 @@ export default class Battery extends Component {
     device: {},
     isConnected: false,
     writeText: '',
-    userId: '1',
-    deviceName: ''
+    userId: '1'
   }
 
   info(message) {
@@ -81,7 +80,7 @@ export default class Battery extends Component {
         // Stop scanning as it's not necessary if you are scanning for one device.
         this.info('Found Device ' + device.name)
         this.setState({
-          deviceName: device.name,
+          // deviceName: device.name,
           stateInfo: 'device found',
           device: device
         })
@@ -89,7 +88,7 @@ export default class Battery extends Component {
 
         this.setupConnection(device)
       } else {
-        this.setState({ deviceName: 'no device found' })
+        this.setState({ info: 'no device found' })
       }
     })
   }
@@ -115,19 +114,32 @@ export default class Battery extends Component {
           console.log('Error while monitoring::', error)
           return
         }
-        let dataRead = base64.decode(data.value)
-        console.log('Read Data..::', dataRead)
+        let dataRead = this.ascii_to_hex(base64.decode(data.value))
+        //console.log('Read Data..::', dataRead)
         count = (count + 1) % 20
         this.setState({ values: this.state.values + '\n' + dataRead })
         if (count == 19) {
           this.sendDataToCloudApi()
         }
+
       }
     )
     //this.writeToDevice(this.state.device, '14')
 
     console.log('exiting...')
   }
+  ascii_to_hex(str) {
+    var arr1 = []
+    for (var n = 0, l = str.length; n < l; n++) {
+      var hex = Number(str.charCodeAt(n)).toString(16)
+      arr1.push(hex)
+    }
+    return arr1.join('')
+  }
+
+  
+
+  
   /*
   getNotifyServicesAndCharacteristics(device) {
     return new Promise((resolve, reject) => {

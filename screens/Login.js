@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import {
   StyleSheet,
-  Text,
+  Alert,
   View,
   Button,
   TextInput,
@@ -42,6 +42,7 @@ export default class Login extends Component {
         return data.json()
       })
       .then(data => {
+        console.log(data)
         if (data.message == 'Login succesfully') {
           console.log('data received:', data.message)
           console.log('device_name::', data.deviceName)

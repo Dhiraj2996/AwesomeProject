@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React, { Component, TouchableOpacity, View, Icon } from 'react'
 import {
   createStackNavigator,
   createAppContainer,
@@ -33,6 +33,7 @@ const DrawerNavigator = createDrawerNavigator(
       screen: Warnings
     }
   },
+
   {
     //to customize the drawer
     contentComponent: props => <SideMenu {...props} />,

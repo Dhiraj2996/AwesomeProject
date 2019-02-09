@@ -1,10 +1,30 @@
 import React, { Component } from 'react'
-import { StyleSheet, Text, View, ScrollView } from 'react-native'
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Icon,
+  Button
+} from 'react-native'
 import Speedmeter from './SpeedMeter'
 import { CustomText } from '../styles/LastCyclestyles'
 
 export default class LastCycle extends Component {
   //list have some values to be passed to speedometer
+
+  // static navigationOptions = {
+  //   headerTitle: 'Last Cycle',
+  //   headerRight: (
+  //     <Button
+  //       onPress={() => this.props.navigation.openDrawer}
+  //       title="Info"
+  //       color="#fff"
+  //     />
+  //   )
+  // }
+
   list = [
     {
       name: 'Charge Energy',
@@ -69,7 +89,20 @@ export default class LastCycle extends Component {
   render() {
     return (
       <View style={styles.container}>
-        <CustomText>Last Cycle Data</CustomText>
+        <View style={{ flexDirection: 'row' }}>
+          <View style={{ flex: 1, alignItems: 'flex-start', margin: 5 }}>
+            <Button
+              onPress={() => this.props.navigation.openDrawer()}
+              title="Menu"
+              color="#444"
+            />
+          </View>
+          <View style={{ flex: 5 }}>
+            <CustomText style={{ textAlign: 'center' }}>
+              Last Cycle Data
+            </CustomText>
+          </View>
+        </View>
         <ScrollView style={{ marginBottom: 15 }}>
           {this.list.map((item, index) => {
             return (
