@@ -11,15 +11,77 @@ import {
 import { BleManager } from 'react-native-ble-plx'
 import base64 from 'react-native-base64'
 import { CloudUrl } from '../assests/Apiurls'
+import Speedmeter from './SpeedMeter'
+import { CustomText } from '../styles/LastCyclestyles'
 
 export default class Battery extends Component {
   constructor() {
     super()
     this.manager = new BleManager()
   }
+  LastCycleDatalist = [
+    {
+      name: 'Charge Energy',
+      value: 25,
+      totalValue: 100,
+      isNumber: 0
+    },
+    {
+      name: 'Drive Energy',
+      value: 75,
+      totalValue: 100,
+      isNumber: 0
+    },
+    {
+      name: 'Peak Drive Current',
+      value: 50,
+      totalValue: 150,
+      isNumber: 0
+    },
+    {
+      name: 'Total Drive Time',
+      value: 90,
+      totalValue: 100,
+      isNumber: 1
+    },
+    {
+      name: 'Total Charge Time',
+      value: 15,
+      totalValue: 50,
+      isNumber: 1
+    },
+    {
+      name: 'Battery Pack Temperature',
+      value: 23,
+      totalValue: 100,
+      isNumber: 0
+    },
+    {
+      name: 'Battery Pack SOC',
+      value: 50,
+      totalValue: 100,
+      isNumber: 0
+    }
+  ]
+
+  //return colour based on percent
+  getColour = (value, totalValue) => {
+    tempNum = value * 100
+    tempNum = tempNum / totalValue
+    if (tempNum >= 75) {
+      //return green
+      return '#33FF33'
+    } else if (tempNum <= 25) {
+      //return red
+      return '#ff0000'
+    } else {
+      //return yellow
+      return '#F4D03F'
+    }
+  }
 
   state = {
-    deviceName: '',
+    deviceName: 'BM70_BLE',
     stateInfo: '',
     info: '',
     values: '',
@@ -28,7 +90,8 @@ export default class Battery extends Component {
     device: {},
     isConnected: false,
     writeText: '',
-    userId: '1'
+    userId: '1',
+    lastCycleStateList: []
   }
 
   info(message) {
@@ -38,6 +101,7 @@ export default class Battery extends Component {
   componentDidMount = () => {
     //get subscription
     this._retrieveData()
+    this.setState({ lastCycleStateList: this.LastCycleDatalist })
     const subscription = this.manager.onStateChange(state => {
       if (state === 'PoweredOn') {
         this.scanAndConnect()
@@ -115,13 +179,13 @@ export default class Battery extends Component {
           return
         }
         let dataRead = this.ascii_to_hex(base64.decode(data.value))
-        //console.log('Read Data..::', dataRead)
+        console.log('Read Data..::', dataRead)
         count = (count + 1) % 20
-        this.setState({ values: this.state.values + '\n' + dataRead })
+        //this.setState({ values: this.state.values + '\n' + dataRead })
+        this.frame_reader(dataRead)
         if (count == 19) {
           this.sendDataToCloudApi()
         }
-
       }
     )
     //this.writeToDevice(this.state.device, '14')
@@ -137,9 +201,6 @@ export default class Battery extends Component {
     return arr1.join('')
   }
 
-  
-
-  
   /*
   getNotifyServicesAndCharacteristics(device) {
     return new Promise((resolve, reject) => {
@@ -268,8 +329,8 @@ export default class Battery extends Component {
     console.log('Sub obj::', sub)
   }
 
-  sendDataToCloudApi = () => {
-    console.log('In sendDataToCloudApi', this.state.gotra)
+  sendDataToCloudApi = dataToBeSent => {
+    console.log('In sendDataToCloudApi')
     fetch(CloudUrl, {
       method: 'POST',
       headers: {
@@ -278,7 +339,7 @@ export default class Battery extends Component {
       },
       body: JSON.stringify({
         userId: this.state.userId,
-        dataStream: this.state.values
+        dataStream: dataToBeSent
       })
     })
       .then(data => {
@@ -301,6 +362,49 @@ export default class Battery extends Component {
       })
   }
 
+  frame_reader(dataReceived) {
+    let i = 0
+
+    // for (i = 0; i < data.length - 7; i++) {
+    //   if ((data.indexOf('ffaaffaa'), i)) {
+    //     console.log('index' + i + ' substr' + data.substring(i + 8, i + 9))
+    //     if (data.substring(i + 8, i + 9) == '1b') {
+    //       this.setDisplayDataValues(data.substring(i + 7))
+    //       break
+    //     }
+    //   }
+    // }
+    let dataToParse = JSON.stringify(dataReceived)
+    if (dataToParse.includes('ffaaffaa1b')) {
+      this.setDisplayDataValues(
+        dataToParse.substring(dataToParse.indexOf('ffaaffaa1b') + 10)
+      )
+    }
+    if (dataToParse.includes('ffaaffaa1c')) {
+      this.cloudDataValues(
+        dataToParse.substring(dataToParse.indexOf('ffaaffaa1c') + 10)
+      )
+    }
+  }
+
+  setDisplayDataValues(valuesData) {
+    let parseLength = 3 //to ignore the packet length
+    for (let parameter = 0; parameter < 7; parameter++) {
+      //will not work for 3 digits
+      this.LastCycleDatalist[parameter].value = parseInt(
+        valuesData.substring(parseLength, parseLength + 3)
+      )
+      parseLength += 3
+    }
+    console.log(this.LastCycleDatalist)
+    this.setState({ lastCycleStateList: this.LastCycleDatalist })
+  }
+  cloudDataValues(cloudData) {
+    let parseLength = 3 //to ignore the packet length
+    var datalen = cloudData.indexOf('aaffaaff')
+    this.sendDataToCloudApi(cloudData.substring(0, datalen))
+  }
+
   render() {
     return (
       <View style={styles.container}>
@@ -314,7 +418,7 @@ export default class Battery extends Component {
             <Text>{this.state.deviceName}</Text>
           </View>
         )}
-        {this.state.isConnected && (
+        {/* {this.state.isConnected && (
           <View style={{ flex: 1, flexDirection: 'column' }}>
             <Text style={styles.welcome}>Welcome to Bluetooth Connect!</Text>
             <TextInput
@@ -342,6 +446,40 @@ export default class Battery extends Component {
               <Text>{this.state.values}</Text>
             </ScrollView>
           </View>
+        )} */}
+        {this.state.isConnected && (
+          <View style={styles.container}>
+            <View style={{ flexDirection: 'row' }}>
+              <View style={{ flex: 1, alignItems: 'flex-start', margin: 5 }}>
+                <Button
+                  onPress={() =>
+                    console.log('this.props.navigation.openDrawer()')
+                  }
+                  title="Menu"
+                  color="#444"
+                />
+              </View>
+              <View style={{ flex: 5 }}>
+                <CustomText style={{ textAlign: 'center' }}>
+                  Last Cycle Data
+                </CustomText>
+              </View>
+            </View>
+            <ScrollView style={{ marginBottom: 15 }}>
+              {this.state.lastCycleStateList.map((item, index) => {
+                return (
+                  <Speedmeter
+                    key={index}
+                    value={item.value}
+                    totalValue={item.totalValue}
+                    color={this.getColour(item.value, item.totalValue)}
+                    displayName={item.name}
+                    isNumber={item.isNumber}
+                  />
+                )
+              })}
+            </ScrollView>
+          </View>
         )}
       </View>
     )
@@ -351,7 +489,8 @@ export default class Battery extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#F5FCFF'
   },
   welcome: {
